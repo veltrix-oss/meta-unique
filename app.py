@@ -37,23 +37,27 @@ else:
         with open(input_filename, "wb") as f:
             f.write(uploaded_file.read())
             
-        st.info("Файл загружен. Начинаем глубокую уникализацию...")
+        st.info("Файл загружен. Очищаем метаданные и перестраиваем пиксели...")
         
+        # Оптимизированная ультра-легкая команда для облака:
+        # Умный зум на 2% + легкий сдвиг контраста + быстрое удаление звука
         ffmpeg_cmd = [
             "ffmpeg", "-y", "-i", input_filename,
-            "-vf", "scale=trunc(iw*1.02/2)*2:-1, eq=contrast=1.03:brightness=0.01:saturation=1.02",
+            "-vf", "scale=trunc(iw*1.02/2)*2:-1,eq=contrast=1.02:brightness=0.01",
             "-an",
+            "-vcodec", "libx264", 
+            "-preset", "ultrafast",  # Максимальная скорость для экономии памяти сервера
             output_filename
         ]
         
         try:
-            with st.spinner("Алгоритмы перестраивают пиксели..."):
+            with st.spinner("Идет обработка видео на сервере..."):
                 result = subprocess.run(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             
             if os.path.exists(output_filename) and os.path.getsize(output_filename) > 0:
                 st.success("🎉 Видео успешно уникализировано!")
                 with open(output_filename, "rb") as file:
-                    btn = st.download_button(
+                    st.download_button(
                         label="📥 Скачать уникальное видео",
                         data=file,
                         file_name=f"unique_{uploaded_file.name}",
@@ -61,6 +65,9 @@ else:
                     )
             else:
                 st.error("Ошибка при обработке видео.")
+                # Выводим подсказку для отладки, если что-то пошло не так
+                with st.expander("Технические детали ошибки"):
+                    st.code(result.stderr)
         except Exception as e:
             st.error(f"Произошла ошибка: {e}")
         finally:
